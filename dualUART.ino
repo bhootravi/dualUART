@@ -43,14 +43,19 @@ char rx_flag = 2;
 #define eol "\r\n"
 #define eol_len 2
 
-char res[1000] = {0};
-int i = 0;
-char pos[100] = {0};
-int deli = 0;
-int eolpos[10] = {0};
-int dd = 0;
+//special characters used as delimitors
 char* dels = "+:'\"";
-char* t = dels;
+
+//response buffer
+char res[1000] = {0};
+int i = 0; //index of res
+//special char position buffer
+//char pos[100] = {0};
+//int deli = 0; //index of pos
+//EOL position buffer
+int eolpos[10] = {0};
+int dd = 0; //index of eolpos
+
 long x = 0;
 
 void setup()
@@ -60,15 +65,80 @@ void setup()
   while (!Serial) {
     ; // wait for serial port to connect. Needed for Leonardo only
   }
-
-
   Serial.println("Goodnight moon!");
-
   // set the data rate for the SoftwareSerial port
   mySerial.begin(19200);
   //mySerial.println("Hello, world?");
 
   rx_flag = 2;
+}
+
+//clear all the global buffers and their index
+void clear_bufs()
+{
+  for(int j = 0; j < 1000; j++)
+  {
+    res[j] = 0;
+    //pos[j/10] = 0;
+    eolpos[j/100] = 0;
+  }
+  i = 0; 
+  //deli = 0;
+  dd = 0;
+}
+
+//TODO check buffer overflow
+//check for special characters at ith index of buf
+//append output in global array 'pos' at index 'deli' 
+//output string format "(sp.char)pos_at_del(i)pos_end_del"
+char check_delemitors(char* buf, int i)
+{
+  //temp pointer to string of sp. characters
+  char* t = dels;
+  
+  //check each sp. char
+  while(*t)
+  {
+    if(buf[i] == *t)
+    {
+      return *t;
+    }
+    //iterate for next sp. char
+    t++;
+  }
+  return -1;
+}
+
+//find next eol
+int find_eol()
+{return -1;}
+
+//TODO check buffer overflow
+//checks if the EOL "ENDS" at the given index i of buf
+//stores the "START" of EOL in eolpos at index dd
+int check_eol(char* buf, int i)
+{
+  // flag for the result
+  char ff = 0;
+  //check if the last char of EOL matches the given index
+  if(buf[i] == eol[eol_len-1])
+  {
+    //possible match
+    ff = 1;
+    //check the remaining chars backwards
+    for(int j = 1; j < eol_len; j++)
+    {
+      //mismatch of any char with the defined eol
+      if(buf[i-j] != eol[eol_len-1-j])
+        ff = 0;
+    }
+    //store the index of "START" of EOL in eolpos
+    if(ff == 1)
+    {
+      eolpos[dd++] = (i-eol_len+1);
+    }
+  }
+  return ff;
 }
 
 void loop() // run over and over
@@ -80,15 +150,7 @@ void loop() // run over and over
     if(rx_flag == 2)
     {
       rx_flag = 0;
-      for(int j = 0; j < 1000; j++)
-      {
-        res[j] = 0;
-        pos[j/10] = 0;
-        eolpos[j/100] = 0;
-      }
-      i = 0;
-      deli = 0;
-      dd = 0;
+      clear_bufs();
       x = millis();
     }
     
@@ -96,89 +158,30 @@ void loop() // run over and over
     if(rx_flag == 1)
       Serial.println("Do something about this");
       //use secondary buffer
-    
     //receiving state - store available byte in buffer
-    //TODO the case when non response data is recived within timeout
     if(rx_flag == 0)
     {
       while (mySerial.available())
       {
         res[i] = (mySerial.read());
-        
-        if(res[i] == eol[eol_len-1])
-        {
-          char ff = 1;
-          for(int j = 1; j < eol_len; j++)
-          {
-            if(res[i-j] != eol[eol_len-1-j])
-              ff = 0;
-          }
-          if(ff == 1)
-          {
-            eolpos[dd++] = (i-eol_len+1);
-          }
-        }
-        
-        t = dels;
-        while(*t)
-        {
-          if(res[i] == *t)
-          {
-            int j = i;
-            //Serial.println(*t);
-            pos[deli++] = res[j];
-            pos[deli++] = pos_at_del;
-            sprintf(&pos[deli], "%d", j);
-            int n = 1;
-            
-            //if (j >= 100000000){j /= 100000000; n += 8;}
-            //if (j >= 10000){j /= 10000; n += 4;}
-            if (j >= 100){j /= 100; n += 2;}
-            if (j >= 10){j /= 10; n += 1;}
-            deli += n;
-            pos[deli++] = pos_end_del;
-          }
-          t++;
-        }
+        check_eol(res, i);
+        check_delemitors(res, i);
         i++;
       }
     }
   }
+
+  //TODO the case when non response data is recived within timeout
   //wait for timeout period for response
-  
   if((rx_flag == 0) && ((millis() - x) > res_timeout))
   {
       rx_flag = 1;
-      /*
-      for(int j = 0; j < i; j++)
-      {
-        t = dels;
-        while(*t)
-        {
-          if(res[j] == *t)
-          {
-            //Serial.println(*t);
-            pos[deli++] = res[j];
-            pos[deli++] = pos_at_del;
-            sprintf(&pos[deli], "%d", j);
-            int n = 1;
-            k = j;
-            //if (k >= 100000000){k /= 100000000; n += 8;}
-            //if (k >= 10000){k /= 10000; n += 4;}
-            if (k >= 100){k /= 100; n += 2;}
-            if (k >= 10){k /= 10; n += 1;}
-            deli += n;
-            pos[deli] = pos_end_del;
-          }
-          t++;
-        }
-      }
-      */
+      
       Serial.print("i = ");
       Serial.println((int)i);
       Serial.println(res);
       
-      Serial.println(pos);
+      //Serial.println(pos);
       Serial.println();
       
       for(int j = 0; j < 10; j++)
@@ -187,11 +190,9 @@ void loop() // run over and over
         Serial.print(',');
       }
       Serial.println();
-      
   }
   
   if (Serial.available())
-  
     mySerial.write(Serial.read());
 
   //process recieved response
