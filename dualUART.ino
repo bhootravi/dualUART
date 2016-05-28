@@ -1,31 +1,5 @@
-/*
-  Software serial multple serial test
-
- Receives from the hardware serial, sends to software serial.
- Receives from software serial, sends to hardware serial.
-
- The circuit:
- * RX is digital pin 10 (connect to TX of other device)
- * TX is digital pin 11 (connect to RX of other device)
-
- Note:
- Not all pins on the Mega and Mega 2560 support change interrupts,
- so only the following can be used for RX:
- 10, 11, 12, 13, 50, 51, 52, 53, 62, 63, 64, 65, 66, 67, 68, 69
-
- Not all pins on the Leonardo support change interrupts,
- so only the following can be used for RX:
- 8, 9, 10, 11, 14 (MISO), 15 (SCK), 16 (MOSI).
-
- created back in the mists of time
- modified 25 May 2012
- by Tom Igoe
- based on Mikal Hart's example
-
- This example code is in the public domain.
-
- */
 #include <SoftwareSerial.h>
+#include "esp.h"
 
 SoftwareSerial mySerial(10, 11); // RX, TX
 
@@ -37,14 +11,7 @@ int res_timeout = 2000;
 //????2 = no cmd
 char rx_flag = 2;
 
-#define pos_at_del '@'
-#define pos_end_del '&'
 
-#define eol "\r\n"
-#define eol_len 2
-
-//special characters used as delimitors
-char* dels = "+:'\"";
 
 //response buffer
 char res[1000] = {0};
@@ -91,7 +58,7 @@ void clear_bufs()
 //check for special characters at ith index of buf
 //append output in global array 'pos' at index 'deli' 
 //output string format "(sp.char)pos_at_del(i)pos_end_del"
-char check_delemitors(char* buf, int i)
+char check_delimiters(char* buf, int i)
 {
   //temp pointer to string of sp. characters
   char* t = dels;
@@ -114,8 +81,13 @@ int find_eol()
 {return -1;}
 
 //TODO check buffer overflow
+//Identifies end of multi-char eol at given index
 //checks if the EOL "ENDS" at the given index i of buf
-//stores the "START" of EOL in eolpos at index dd
+//stores the "START" index of EOL in eolpos at index dd
+//implicit data:
+//#define eol of len #define eol_len
+//eolpos(array to store eol index), dd(last index of eolpos)
+
 int check_eol(char* buf, int i)
 {
   // flag for the result
@@ -141,11 +113,47 @@ int check_eol(char* buf, int i)
   return ff;
 }
 
+//checks if the line ending at eolpos[i](i.e. (i+1)th line) ends in
+//any of the strings in end_tags
+//implicit data:
+//end_tags array containing strings that indicate end of response
+//returns the index of tag that matched
+int check_end_tag(char* buf, int i)
+{
+  char ff = -1;
+  int start_i, end_i, j = 0;
+  if((i-1) < 0)
+    start_i = 0;
+  else
+    start_i = eolpos[i-1] + eol_len - 1;
+  if(i >= 0)
+    end_i = eolpos[i];
+  else 
+    return -1;
+  //Serial.println("check call");
+  for(j = 0; j < end_tags_len; j++)
+  {
+    int x = strlen(end_tags[j]);
+    //Serial.println(x);
+    //Serial.println(end_tags[j]);
+    if(x < (end_i - start_i))
+    {
+      //Serial.println((char*)&buf[end_i - x]);
+      if(strncmp(&buf[end_i - x], end_tags[j], x) == 0)
+      {
+        ff = 1;
+        return j;
+      }
+    }
+  }
+  return ff;
+}
+
 void loop() // run over and over
 {
   if (mySerial.available())
   {
-    Serial.println("asdas");
+    //Serial.println("asdas");
     //initialise related variables and goto receiving state
     if(rx_flag == 2)
     {
@@ -164,8 +172,18 @@ void loop() // run over and over
       while (mySerial.available())
       {
         res[i] = (mySerial.read());
-        check_eol(res, i);
-        check_delemitors(res, i);
+        if(check_eol(res, i))
+        {
+          Serial.print("found eol at ");
+          Serial.println(eolpos[dd-1]);
+          int xx = check_end_tag(res, dd - 1);
+          if(xx >= 0)
+          {
+            Serial.println("tag foung");
+            Serial.println(end_tags[xx]);
+          }
+        }
+        //check_delimiters(res, i);
         i++;
       }
     }
