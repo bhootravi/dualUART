@@ -1,17 +1,26 @@
 #include "at.h"
 
+int at_init(at_params* param)
+{
+  params = param;
+  state.rx_flag = 2;
+  state.i = 0;
+  state.dd = 0; //index of eolpos
+}
+
 //clear all the global buffers and their index
 void clear_bufs()
 {
-  for(int j = 0; j < 1000; j++)
+  int j;
+  for(j = 0; j < 1000; j++)
   {
-    res[j] = 0;
+    params->buf[j] = 0;
     //pos[j/10] = 0;
-    eolpos[j/100] = 0;
+    state.eolpos[j/100] = 0;
   }
-  i = 0; 
+  state.i = 0; 
   //deli = 0;
-  dd = 0;
+  state.dd = 0;
 }
 
 //TODO check buffer overflow
@@ -23,7 +32,7 @@ void clear_bufs()
 char check_delimiters(char* buf, int i)
 {
   //temp pointer to string of sp. characters
-  char* t = dels;
+  char* t = params->dels;
   
   //check each sp. char
   while(*t)
@@ -51,21 +60,22 @@ int check_eol(char* buf, int i)
   // flag for the result
   char ff = 0;
   //check if the last char of EOL matches the given index
-  if(buf[i] == eol[eol_len-1])
+  if(buf[i] == params->eol[params->eol_len-1])
   {
     //possible match
     ff = 1;
     //check the remaining chars backwards
-    for(int j = 1; j < eol_len; j++)
+    int j;
+    for(j = 1; j < params->eol_len; j++)
     {
       //mismatch of any char with the defined eol
-      if(buf[i-j] != eol[eol_len-1-j])
+      if(buf[i-j] != params->eol[params->eol_len-1-j])
         ff = 0;
     }
     //store the index of "START" of EOL in eolpos
     if(ff == 1)
     {
-      eolpos[dd++] = (i-eol_len+1);
+      state.eolpos[state.dd++] = (i-params->eol_len+1);
     }
   }
   return ff;
@@ -84,21 +94,21 @@ int check_end_tag(char* buf, int i)
   if((i-1) < 0)
     start_i = 0;
   else
-    start_i = eolpos[i-1] + eol_len - 1;
+    start_i = state.eolpos[i-1] + params->eol_len - 1;
   if(i >= 0)
-    end_i = eolpos[i];
+    end_i = state.eolpos[i];
   else 
     return -1;
   //Serial.println("check call");
-  for(j = 0; j < end_tags_len; j++)
+  for(j = 0; j < params->end_tags_len; j++)
   {
-    int x = strlen(end_tags[j]);
+    int x = strlen(params->end_tags[j]);
     //Serial.println(x);
-    //Serial.println(end_tags[j]);
+    //Serial.println(params->end_tags[j]);
     if(x < (end_i - start_i))
     {
       //Serial.println((char*)&buf[end_i - x]);
-      if(strncmp(&buf[end_i - x], end_tags[j], x) == 0)
+      if(strncmp(&buf[end_i - x], params->end_tags[j], x) == 0)
       {
         ff = 1;
         return j;

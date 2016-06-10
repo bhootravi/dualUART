@@ -1,10 +1,7 @@
 #include <SoftwareSerial.h>
-#include "at.h"
 #include "esp.h"
 
 SoftwareSerial mySerial(10, 11); // RX, TX
-
-
 
 //1 = ready for processing
 //0 = receiving

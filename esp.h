@@ -1,14 +1,12 @@
+#ifndef ESP_H
+#define ESP_H
+
+#include "at.h"
+
 //time(in ms) to wait for the response before processing
 int res_timeout = 2000;
 //response buffer
 char res[1000] = {0};
-int i = 0; //index of res
-//special char position buffer
-//char pos[100] = {0};
-//int deli = 0; //index of pos
-//EOL position buffer
-int eolpos[10] = {0};
-int dd = 0; //index of eolpos
 
 #define eol "\r\n"
 #define eol_len 2
@@ -20,6 +18,8 @@ const char* end_tags[end_tags_len] = {"OK", "ERROR", "FAIL", "SEND OK", "CONNECT
 #define pos_end_del '&'
 //special characters used as delimitors
 char* dels = "+:'\"";
+
+at_params at;
 
 enum parity
 {
@@ -117,3 +117,5 @@ struct node
   char ip[16];
   char mac[18];
 };
+
+#endif
