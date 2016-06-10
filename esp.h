@@ -1,14 +1,25 @@
-#define pos_at_del '@'
-#define pos_end_del '&'
+//time(in ms) to wait for the response before processing
+int res_timeout = 2000;
+//response buffer
+char res[1000] = {0};
+int i = 0; //index of res
+//special char position buffer
+//char pos[100] = {0};
+//int deli = 0; //index of pos
+//EOL position buffer
+int eolpos[10] = {0};
+int dd = 0; //index of eolpos
 
 #define eol "\r\n"
 #define eol_len 2
 
-//special characters used as delimitors
-char* dels = "+:'\"";
-
 #define end_tags_len 5
 const char* end_tags[end_tags_len] = {"OK", "ERROR", "FAIL", "SEND OK", "CONNECT"};
+
+#define pos_at_del '@'
+#define pos_end_del '&'
+//special characters used as delimitors
+char* dels = "+:'\"";
 
 enum parity
 {
