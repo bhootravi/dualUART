@@ -3,23 +3,21 @@
 
 #include "at.h"
 
-//time(in ms) to wait for the response before processing
-int res_timeout = 2000;
-//response buffer
-char res[1000] = {0};
+#define EOL "\r\n"
+#define EOL_LEN 2
 
-#define eol "\r\n"
-#define eol_len 2
+#define OK_ind  0
+#define ERROR_ind  1
 
-#define end_tags_len 5
-const char* end_tags[end_tags_len] = {"OK", "ERROR", "FAIL", "SEND OK", "CONNECT"};
+#define end_tagsLen 5
 
 #define pos_at_del '@'
 #define pos_end_del '&'
-//special characters used as delimitors
-char* dels = "+:'\"";
 
-at_params at;
+#define ECHO_OFF 0
+#define ECHO_ON  1
+
+#define QUERY -4
 
 enum parity
 {
@@ -66,56 +64,59 @@ enum smart_config
   air_kiss
 };
 
-struct uart_config
+typedef struct uart_config
 {
   int baud_rate = 19200;
   char databits = 8;
   char stopbits = onebit;
   char parity = none;
   char flow_control = disable;
-};
+}uart_config;
 
-struct esp_config
+typedef struct esp_config
 {
   char echo = 0;
   char sdk[5];
   struct uart_config esp_uart;
-  char mode = sta_ap;
-  char smartconfig = 0;
-  char sta_dhcp = 1;
-  char ap_dhcp = 1;
-};
+  char mode;// = sta_ap;
+  char smartconfig;// = 0;
+  char sta_dhcp;// = 1;
+  char ap_dhcp;// = 1;
+}esp_config;
 //char echo = 0;
 
-struct interface
+typedef struct esp_interface
 {
   char ip[16];
   char netmask[16];
   char gateway[16];
   char mac[18];
-} sta, ap;
+}esp_interface;
 
-struct ap_connection
+typedef struct esp_ap_connection
 {
   char ssid[30];
   char pass[65];
-} def_ap;
+}esp_ap_connection;
 
 //use to store properties of created ap ignoring rssi
-struct ap_prop
+typedef struct esp_ap_prop
 {
   char enc;
   char ssid[30];
   char mac[18];
   char chan;
   int rssi = 0;
-};
+}esp_ap_prop;
 
 //for storing nodes connected to ap
-struct node
+typedef struct node
 {
   char ip[16];
   char mac[18];
 };
+
+void esp_init();
+int esp_echo(char in);
 
 #endif
